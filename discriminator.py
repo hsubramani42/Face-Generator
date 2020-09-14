@@ -38,10 +38,12 @@ class Discriminator(torch.nn.Module):
 
                          #(n,out_channel*32,1,1)
                          Conv2d(out_channel*32,out_channel*64,kernel_size=(4,4),stride=(2,2),padding=1),
+                         LeakyReLU(0.2,inplace=True)
                          Flatten(),
                          
                          #(n,out_channel*64)
                          Linear(out_channel*64,512),
+                         BatchNorm1d(512),
                          LeakyReLU(0.2,inplace=True),
 
                          #(n,512)

@@ -1,4 +1,5 @@
 import torch
+torch.manual_seed(0)
 class GAN:
     def __init__(self,discriminator:torch.nn.Module,generator:torch.nn.Module,
                  train_dl:torch.utils.data.Dataset,latent_size:int,batch_size:int):
