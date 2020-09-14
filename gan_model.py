@@ -47,6 +47,7 @@ class GAN:
         return gen_loss.item()
     def img_generator(self):
         """to display a random generated images"""
+        import matplotlib.pyplot as plt
         idx=np.random.randint(self.batch_size)
         outs=self.latest
         img=outs[idx].permute(1,2,0).numpy()
@@ -62,7 +63,6 @@ class GAN:
                  'orange',label='Generator Loss')
         plt.show()
     def show_batch(self,nrow:int,epoch:int):
-        import matplotlib.pyplot as plt
         from torchvision.utils import save_image
         #changing the tanh distribution to interval [0,1]
         img_batch=self.latest * 0.5 + 0.5
