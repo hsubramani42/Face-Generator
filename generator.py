@@ -1,3 +1,5 @@
+import torch
+from torch.nn import *
 class Generator(torch.nn.Module):
     #image output size is (batch_size,out_channel,128,128)
     def __init__(self,input_channel,out_channel):

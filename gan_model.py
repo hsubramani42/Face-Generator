@@ -1,4 +1,5 @@
 import torch
+import sys
 torch.manual_seed(0)
 class GAN:
     def __init__(self,discriminator:torch.nn.Module,generator:torch.nn.Module,
