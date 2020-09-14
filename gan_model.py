@@ -4,6 +4,7 @@ torch.manual_seed(0)
 class GAN:
     def __init__(self,discriminator:torch.nn.Module,generator:torch.nn.Module,
                  train_dl:torch.utils.data.Dataset,latent_size:int,batch_size:int):
+        torch.manual_seed(0) #reproducible outputs
         self.discriminator=discriminator.cuda().float()
         self.batch_size=batch_size
         self.generator=generator.cuda().float()
