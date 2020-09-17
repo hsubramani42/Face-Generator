@@ -13,7 +13,7 @@ class GAN:
         self.train_dl=train_dl
         self.tracker={'dis':[],'gen':[]}
         self.latent=torch.randn(batch_size,latent_size,1,1).cuda()
-        self.loss=BCELoss()
+        self.loss=torch.nn.BCELoss()
         self.dis_optim=torch.optim.Adam(self.discriminator.parameters(),lr=0.0002,betas=(0.5, 0.999))
         self.gen_optim=torch.optim.Adam(self.generator.parameters(),lr=0.00002,betas=(0.5, 0.999))
         self.latest=None
