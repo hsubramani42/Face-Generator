@@ -14,8 +14,8 @@ class GAN:
         self.tracker={'dis':[],'gen':[]}
         self.latent=torch.randn(batch_size,latent_size,1,1).cuda()
         self.loss=torch.nn.BCELoss()
-        self.dis_optim=torch.optim.Adam(self.discriminator.parameters(),lr=0.0002,betas=(0.5, 0.999))
-        self.gen_optim=torch.optim.Adam(self.generator.parameters(),lr=0.00002,betas=(0.5, 0.999))
+        self.dis_optim=None
+        self.gen_optim=None
         self.latest=None
     def train_discriminator(self,xb:torch.tensor):
         self.dis_optim.zero_grad()
@@ -24,6 +24,7 @@ class GAN:
         loss_real=self.loss(out_real,torch.ones(out_real.shape[0],1).cuda())
         #generate a fake image batch
         fake_img=self.generator(self.latent)
+        self.latest=fake_img
         #passing fake image into discriminator and finding loss of the model
         out_fake=self.discriminator(fake_img)
         loss_fake=self.loss(out_fake,torch.zeros(out_fake.shape[0],1).cuda())
@@ -44,7 +45,7 @@ class GAN:
         gen_loss.backward()
         self.gen_optim.step()
         #return loss of the model
-        return gen_loss.item(), fake_img.detach().cpu()
+        return gen_loss.item()
     def img_generator(self):
         """to display a random generated images"""
         idx=np.random.randint(self.batch_size)
@@ -81,13 +82,15 @@ class GAN:
             if((self.tracker['dis'][-1] < d_loss) & (self.tracker['gen'][-1] < g_loss)):
                 return True
         return False
-    def fit(self,epochs):
+    def fit(self,epochs,dis_lr=0.002,gen_lr=0.002):
+        self.dis_optim=torch.optim.Adam(self.discriminator.parameters(),lr=dis_lr,betas=(0.5, 0.999))
+        self.gen_optim=torch.optim.Adam(self.generator.parameters(),lr=gen_lr,betas=(0.5, 0.999))
         for i in range(epochs):
             dis_epoch_loss,gen_epoch_loss=0,0
             fake_image=None
             for j,(xb) in enumerate(self.train_dl):
                 dis_loss=self.train_discriminator(xb)
-                gen_loss,self.latest=self.train_generator(xb)
+                gen_loss=self.train_generator(xb)
                 #check loss with previous loss and store best weights of model
                 if(self.model_save(dis_loss,gen_loss)):
                     torch.save(self.generator.state_dict(),'best_generator_parameters.pth')
