@@ -1,20 +1,21 @@
-import torch
+import matplotlib.pyplot as plt
+from torchvision.utils import save_image,make_grid
 import sys
+import torch
 import numpy as np
-torch.manual_seed(0)
+torch.manual_seed(999)
 class GAN:
     def __init__(self,discriminator:torch.nn.Module,generator:torch.nn.Module,
                  train_dl:torch.utils.data.Dataset,latent_size:int,batch_size:int):
-        torch.manual_seed(0) #reproducible outputs
         self.discriminator=discriminator.cuda().float()
         self.batch_size=batch_size
         self.generator=generator.cuda().float()
         self.train_dl=train_dl
         self.tracker={'dis':[],'gen':[]}
         self.latent=torch.randn(batch_size,latent_size,1,1).cuda()
-        self.loss=torch.nn.BCELoss()
+        self.loss=BCELoss()
         self.dis_optim=torch.optim.Adam(self.discriminator.parameters(),lr=0.0002,betas=(0.5, 0.999))
-        self.gen_optim=torch.optim.Adam(self.generator.parameters(),lr=0.0002,betas=(0.5, 0.999))
+        self.gen_optim=torch.optim.Adam(self.generator.parameters(),lr=0.00002,betas=(0.5, 0.999))
         self.latest=None
     def train_discriminator(self,xb:torch.tensor):
         self.dis_optim.zero_grad()
@@ -36,7 +37,6 @@ class GAN:
         self.gen_optim.zero_grad()
         #generate fake images
         fake_img=self.generator(self.latent)
-        self.latest=fake_img.detach().cpu()
         #passing images to discriminator to fool it
         out_fake=self.discriminator(fake_img)
         #update generator
@@ -44,10 +44,9 @@ class GAN:
         gen_loss.backward()
         self.gen_optim.step()
         #return loss of the model
-        return gen_loss.item()
+        return gen_loss.item(), fake_img.detach().cpu()
     def img_generator(self):
         """to display a random generated images"""
-        import matplotlib.pyplot as plt
         idx=np.random.randint(self.batch_size)
         outs=self.latest
         img=outs[idx].permute(1,2,0).numpy()
@@ -56,26 +55,42 @@ class GAN:
         plt.show()
     def loss_tracker(self):
         """to plot loss of the models w.r.t """
-        import matplotlib.pyplot as plt
         plt.plot(np.arange(0,len(self.tracker['dis'])),self.tracker['dis'],
                  'blue',label='Discriminator Loss')
         plt.plot(np.arange(0,len(self.tracker['gen'])),self.tracker['gen'],
                  'orange',label='Generator Loss')
         plt.show()
     def show_batch(self,nrow:int,epoch:int):
-        from torchvision.utils import save_image
-        #changing the tanh distribution to interval [0,1]
-        img_batch=self.latest * 0.5 + 0.5
-        #save_image in current working directory
-        save_image(img_batch,fp='Generated at epoch'+str(epoch)+'.png',nrow=nrow,scale_each=True)
+        noise=self.latest * 0.5 + 0.5
+        save_image(noise,fp='Generated at epoch'+str(epoch)+'.png',nrow=nrow,scale_each=True)
+        img=np.transpose(make_grid(noise).numpy(),(1,2,0))
+        plt.imshow(img)
+        plt.show()
+    def best_image_generator(self,nrow):
+        self.generator.load_state_dict(torch.load("best_generator_parameters.pth"))
+        self.latest=self.generator(self.latent.cuda()).detach().cpu()
+        noise=self.latest * 0.5 + 0.5
+        save_image(noise,fp='Best Generated.png',nrow=nrow,scale_each=True)
+        img=np.transpose(grid(noise),(1,2,0))
+        plt.imshow(img)
+        plt.show()
+        self.latest
+    def model_save(self,d_loss,g_loss):
+        #comparing model with previous states and saving best parameters
+        if(len(self.tracker['dis'])>0):
+            if((self.tracker['dis'][-1] < d_loss) & (self.tracker['gen'][-1] < g_loss)):
+                return True
+        return False
     def fit(self,epochs):
-        import matplotlib.pyplot as plt
         for i in range(epochs):
-            dis_loss,gen_loss=0,0
+            dis_epoch_loss,gen_epoch_loss=0,0
             fake_image=None
             for j,(xb) in enumerate(self.train_dl):
                 dis_loss=self.train_discriminator(xb)
-                gen_loss=self.train_generator(xb)
+                gen_loss,self.latest=self.train_generator(xb)
+                #check loss with previous loss and store best weights of model
+                if(self.model_save(dis_loss,gen_loss)):
+                    torch.save(self.generator.state_dict(),'best_generator_parameters.pth')
                 self.tracker['dis'].append(dis_loss)
                 self.tracker['gen'].append(gen_loss)
                 #display running progress
