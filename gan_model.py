@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 from torchvision.utils import save_image,make_grid
 import sys
-import torch
 import numpy as np
+import torch
 torch.manual_seed(999)
 class GAN:
     def __init__(self,discriminator:torch.nn.Module,generator:torch.nn.Module,
